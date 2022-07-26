@@ -190,3 +190,24 @@ You will will need to make a Route.js file for each. For each route, you will ne
 | Parameter | Type  | Description              |
 | :-------- | :---- | :----------------------- |
 | `user_id` | `int` | **Required**. ID of user |
+
+##How to host on Heroku
+
+1. Create a new file called `Procfile`
+   - Add `web: node index.js` to this file. This indicates to Heroku that this app is a Node.js application
+2. In your `package.json` under the `"scripts"` object, add a new key-value pair
+   `"start": "node index.js"`
+   - Heroku will look for the start script to start running the Node.js application
+3. Push work to github
+4. Login/Register on Heroku
+5. Create new app on Heroku Dashboard
+   - Give the app a name
+   - Under the "Deployment Method" section, connect the app to github
+   - Select the repository you want to host
+   - Make sure you select the correct branch to host
+   - Enable `Automatic Deploys`, as this will update the API every time you push to Github
+   - Click on the "Deploy Branch" button
+   - Under the **Settings** tab, go to the "Config Vars" section and add in all the variables from your `.env` file.
+   - Once all environment variables have been provided (correct spelling), click on the **More** button and select `Restart all dynos`. This will just refresh the application to make sure that the environment variables have been registered.
+
+#### After following these steps, you should be able to open and use your hosted API! Congrats!
