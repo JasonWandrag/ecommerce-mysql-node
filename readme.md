@@ -191,7 +191,7 @@ You will will need to make a Route.js file for each. For each route, you will ne
 | :-------- | :---- | :----------------------- |
 | `user_id` | `int` | **Required**. ID of user |
 
-##How to host on Heroku
+## How to host on Heroku
 
 1. Create a new file called `Procfile`
    - Add `web: node index.js` to this file. This indicates to Heroku that this app is a Node.js application
