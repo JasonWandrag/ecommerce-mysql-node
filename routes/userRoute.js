@@ -2,8 +2,10 @@ const express = require("express");
 const router = express.Router();
 const con = require("../lib/dbConnection");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const middleware = require("../middleware/auth");
 
-router.get("/", (req, res) => {
+router.get("/", middleware, (req, res) => {
   try {
     let sql = "SELECT * FROM users";
     con.query(sql, (err, result) => {
@@ -96,17 +98,40 @@ router.post("/login", (req, res) => {
       if (result.length === 0) {
         res.send("Email not found please register");
       } else {
-        // Decryption
-        // Accepts the password stored in database and the password given by user (req.body)
         const isMatch = await bcrypt.compare(
           req.body.password,
           result[0].password
         );
-        // If password does not match
+        console.log(isMatch);
+        // New code
         if (!isMatch) {
           res.send("Password incorrect");
         } else {
-          res.send(result);
+          // The information the should be stored inside token
+          const payload = {
+            user: {
+              user_id: result[0].user_id,
+              full_name: result[0].full_name,
+              email: result[0].email,
+              user_type: result[0].user_type,
+              phone: result[0].phone,
+              country: result[0].country,
+              billing_address: result[0].billing_address,
+              default_shipping_address: result[0].default_shipping_address,
+            },
+          };
+          // Creating a token and setting expiry date
+          jwt.sign(
+            payload,
+            process.env.jwtSecret,
+            {
+              expiresIn: "365d",
+            },
+            (err, token) => {
+              if (err) throw err;
+              res.json({ token });
+            }
+          );
         }
       }
     });
@@ -150,6 +175,20 @@ router.put("/update-user/:id", (req, res) => {
   } catch (error) {
     console.log(error);
   }
+});
+
+router.get("/verify", (req, res) => {
+  const token = req.header("x-auth-token");
+  jwt.verify(token, process.env.jwtSecret, (error, decodedToken) => {
+    if (error) {
+      res.status(401).json({
+        msg: "Unauthorized Access!",
+      });
+    } else {
+      res.status(200);
+      res.send(decodedToken);
+    }
+  });
 });
 
 module.exports = router;

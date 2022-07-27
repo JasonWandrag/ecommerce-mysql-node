@@ -305,3 +305,165 @@ router.post("/login", (req, res) => {
 });
 
 ```
+
+<!-- Middleware -->
+<br>
+
+## Creating Middleware
+
+> Middleware functions are functions that have access to the request object (req), the response object (res), and the next middleware function in the application’s request-response cycle. The next middleware function is commonly denoted by a variable named next
+
+### Dependinces needed to create the middleware
+
+- jsonwebtoken / JWT
+- config
+  > `npm i jsonwebtoken config`
+
+### What is jsonwebtoken
+
+<a href="https://jwt.io/introduction">Click here for more</a>
+
+> JWTs can be encrypted to also provide secrecy between parties, we will focus on signed tokens. Signed tokens can verify the integrity of the claims contained within it, while encrypted tokens hide those claims from other parties. When tokens are signed using public/private key pairs, the signature also certifies that only the party holding the private key is the one that signed it.
+
+### What is config
+
+<a href="https://www.npmjs.com/package/config">Click here for more</a>
+
+> Node-config organizes hierarchical configurations for your app deployments.
+> It lets you define a set of default parameters, and extend them for different deployment environments (development, qa, staging, production, etc.).
+
+## Step-by-step to create your middleware
+
+1. Add **_jwtSecret_** to your `.env` file
+
+   ```Javascript
+      jwtSecret=Nobody_should_know_this
+   ```
+
+2. Create a new folder called `middleware`
+
+   - create a file within `middleware` called `auth.js`
+
+   ```JavaScript
+      const jwt = require("jsonwebtoken");
+      require('dotenv').config()
+
+      module.exports = function (req, res, next) {
+       //Get token from request header
+       const token = req.header("x-auth-token");
+
+       //Check if not token is valid
+       if (!token) {
+         return res.status(401).json({ msg: "No token, authorisation denied" });
+       }
+
+       try {
+        // Decoding the token and getting user attached to the token
+         const decoded = jwt.verify(token, process.env.jwtSecret);
+
+        // Storing User data in req.user
+         req.user = decoded.user;
+         next();
+       } catch (err) {
+         res.status(401).json({ msg: "Token is not valid" });
+       }
+     };
+   ```
+
+3. Lets updated UserRoutes.js file to accept our middleware
+
+- Lets updated the login route
+
+```Javascript
+  const jwt = require('jsonwebtoken');
+
+  // Login
+  router.post("/login", (req, res) => {
+    try {
+      let sql = "SELECT * FROM users WHERE ?";
+      let user = {
+        email: req.body.email,
+      };
+      con.query(sql, user, async (err, result) => {
+        if (err) throw err;
+        if (result.length === 0) {
+          res.send("Email not found please register");
+        } else {
+          const isMatch = await bcrypt.compare(
+            req.body.password,
+            result[0].password
+          );
+          if (!isMatch) {
+            res.send("Password incorrect");
+          } else {
+            // The information the should be stored inside token
+            const payload = {
+              user: {
+                user_id: result[0].user_id,
+                full_name: result[0].full_name,
+                email: result[0].email,
+                user_type: result[0].user_type,
+                phone: result[0].phone,
+                country: result[0].country,
+                billing_address: result[0].billing_address,
+                default_shipping_address: result[0].default_shipping_address,
+              },
+            };
+            // Creating a token and setting expiry date
+            jwt.sign(
+              payload,
+              process.env.jwtSecret,
+              {
+                expiresIn: "365d",
+              },
+              (err, token) => {
+                if (err) throw err;
+                res.json({ token });
+              }
+            );
+          }
+        }
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  });
+
+```
+
+- Lets create a verify route to check our token
+
+```Javascript
+// Verify
+router.get("/verify", (req, res) => {
+  const token = req.header("x-auth-token");
+  jwt.verify(token, process.env.jwtSecret, (error, decodedToken) => {
+    if (error) {
+      res.status(401).json({
+        msg: "Unauthorized Access!",
+      });
+    } else {
+      res.status(200);
+      res.send(decodedToken);
+    }
+  });
+});
+```
+
+- Lets attach our middleware to out get all user routes ('/')
+
+```Javascript
+const middleware = require("../middleware/auth");
+
+  router.get("/", middleware, (req, res) => {
+    try {
+      let sql = "SELECT * FROM users";
+      con.query(sql, (err, result) => {
+        if (err) throw err;
+        res.send(result);
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  });
+```
