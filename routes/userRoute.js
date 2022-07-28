@@ -54,7 +54,6 @@ router.post("/register", (req, res) => {
     const {
       full_name,
       email,
-      password,
       user_type,
       phone,
       country,
@@ -62,12 +61,12 @@ router.post("/register", (req, res) => {
       default_shipping_address,
     } = req.body;
     const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(password, salt);
+    const hash = bcrypt.hashSync(req.body.password, salt);
     let user = {
       full_name,
       email,
       // We sending the hash value to be stored witin the table
-      hash,
+      password: hash,
       user_type,
       phone,
       country,
